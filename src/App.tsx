@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import OrganizationDetail from "./pages/OrganizationDetail";
+import ProjectBoard from "./pages/ProjectBoard";
 import { useAuth } from "./context/AuthContext";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -18,9 +21,23 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <div className="min-h-screen bg-slate-900 text-white p-8">
-                Dashboard coming next
-              </div>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/organizations/:orgSlug"
+          element={
+            <ProtectedRoute>
+              <OrganizationDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId"
+          element={
+            <ProtectedRoute>
+              <ProjectBoard />
             </ProtectedRoute>
           }
         />
