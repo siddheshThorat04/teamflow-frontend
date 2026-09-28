@@ -24,3 +24,7 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+export function wakeUpServer(): void {
+  // Fire-and-forget: the response doesn't matter, only that the backend starts booting.
+  apiClient.get("/api/health").catch(() => {});
+}
