@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { login as loginApi } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
-
+import { useSlowIndicator } from "../hooks/useSlowIndicator";
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -10,7 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
+  const slow = useSlowIndicator(loading);
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -68,6 +68,11 @@ export default function Login() {
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
+          {loading && slow && (
+            <p className="text-slate-400 text-sm text-center">
+              The server is waking up after being idle. The first request can take up to a minute.
+            </p>
+          )}
         </form>
 
         <p className="text-slate-400 text-sm mt-4 text-center">
