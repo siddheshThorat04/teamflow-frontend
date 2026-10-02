@@ -3,14 +3,18 @@ import { useParams, Link } from "react-router-dom";
 import { getOrganizationBySlug } from "../api/organizations";
 import { getProjectsForOrg, createProject } from "../api/projects";
 import type { Organization, Project } from "../types";
-
+import { getMembers, addMember } from "../api/members";
+import type { OrganizationMember } from "../api/members";
 export default function OrganizationDetail() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [showAddMemberForm, setShowAddMemberForm] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [addingMember, setAddingMember] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectKey, setNewProjectKey] = useState("");
@@ -24,12 +28,14 @@ export default function OrganizationDetail() {
 
   async function loadData(slug: string) {
     try {
-      const [orgData, projectsData] = await Promise.all([
+      const [orgData, projectsData, membersData] = await Promise.all([
         getOrganizationBySlug(slug),
         getProjectsForOrg(slug),
+        getMembers(slug),
       ]);
       setOrganization(orgData);
       setProjects(projectsData);
+      setMembers(membersData);
     } catch (err) {
       setError("Failed to load organization.");
     } finally {
@@ -58,7 +64,24 @@ export default function OrganizationDetail() {
       setCreating(false);
     }
   }
+  async function handleAddMember(e: React.FormEvent) {
+    e.preventDefault();
+    if (!orgSlug) return;
+    setAddingMember(true);
+    setError(null);
 
+    try {
+      await addMember(orgSlug, newMemberEmail);
+      const updatedMembers = await getMembers(orgSlug);
+      setMembers(updatedMembers);
+      setNewMemberEmail("");
+      setShowAddMemberForm(false);
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to add member.");
+    } finally {
+      setAddingMember(false);
+    }
+  }
   if (loading) {
     return <div className="min-h-screen bg-slate-900 text-white p-8">Loading...</div>;
   }
@@ -146,6 +169,54 @@ export default function OrganizationDetail() {
             ))}
           </div>
         )}
+        <div className="mt-10">
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="text-xl font-semibold">Members</h2>
+    <button
+      onClick={() => setShowAddMemberForm(!showAddMemberForm)}
+      className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium text-sm transition-colors"
+    >
+      + Add Member
+    </button>
+  </div>
+
+  {showAddMemberForm && (
+    <form
+      onSubmit={handleAddMember}
+      className="bg-slate-800 rounded-lg p-4 mb-6 flex gap-2"
+    >
+      <input
+        type="email"
+        placeholder="Email of an existing Teamflow user"
+        value={newMemberEmail}
+        onChange={(e) => setNewMemberEmail(e.target.value)}
+        required
+        className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <button
+        type="submit"
+        disabled={addingMember}
+        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 px-4 py-2 rounded font-medium transition-colors"
+      >
+        {addingMember ? "Adding..." : "Add"}
+      </button>
+    </form>
+  )}
+
+  <div className="bg-slate-800 border border-slate-700 rounded-lg divide-y divide-slate-700">
+    {members.map((m) => (
+      <div key={m.userId} className="px-4 py-3 flex justify-between items-center">
+        <div>
+          <p className="text-sm font-medium">{m.fullName}</p>
+          <p className="text-xs text-slate-400">{m.email}</p>
+        </div>
+        <span className="text-xs bg-slate-700 px-2 py-1 rounded uppercase tracking-wide">
+          {m.role}
+        </span>
+      </div>
+    ))}
+  </div>
+</div>
       </main>
     </div>
   );
