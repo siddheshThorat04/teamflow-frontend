@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getTasksForProject, createTask, updateTask } from "../api/tasks";
 import TaskCard from "../components/TaskCard";
-import type { Task, TaskStatus } from "../types";
+import TaskDetailModal from "../components/TaskDetailModal";
+import type { Task, TaskStatus, TaskPriority } from "../types";
 
 const columns: { status: TaskStatus; label: string }[] = [
   { status: "TODO", label: "To Do" },
@@ -19,6 +20,7 @@ export default function ProjectBoard() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [creating, setCreating] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const numericProjectId = projectId ? parseInt(projectId, 10) : null;
 
@@ -65,6 +67,15 @@ export default function ProjectBoard() {
     } catch (err) {
       setError("Failed to update task.");
     }
+  }
+
+  async function handleTaskUpdate(
+    taskId: number,
+    updates: { title?: string; description?: string; status?: TaskStatus; priority?: TaskPriority; dueDate?: string }
+  ) {
+    if (!numericProjectId) return;
+    const updated = await updateTask(numericProjectId, taskId, updates);
+    setTasks(tasks.map((t) => (t.id === updated.id ? updated : t)));
   }
 
   if (loading) {
@@ -124,7 +135,7 @@ export default function ProjectBoard() {
               .filter((t) => t.status === col.status)
               .map((task) => (
                 <div key={task.id}>
-                  <TaskCard task={task} onClick={() => {}} />
+                  <TaskCard task={task} onClick={() => setSelectedTask(task)} />
                   <select
                     value={task.status}
                     onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
@@ -141,6 +152,14 @@ export default function ProjectBoard() {
           </div>
         ))}
       </main>
+
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onUpdate={handleTaskUpdate}
+        />
+      )}
     </div>
   );
 }

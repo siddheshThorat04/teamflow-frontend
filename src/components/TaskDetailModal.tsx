@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { Task, TaskStatus, TaskPriority } from "../types";
-
+import { useEffect } from "react";
+import { getCommentsForTask, addComment } from "../api/comments";
+import type { Comment } from "../api/comments";
 interface TaskDetailModalProps {
   task: Task;
   onClose: () => void;
@@ -17,7 +19,35 @@ export default function TaskDetailModal({ task, onClose, onUpdate }: TaskDetailM
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
   const [dueDate, setDueDate] = useState(task.dueDate || "");
   const [saving, setSaving] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [loadingComments, setLoadingComments] = useState(true);
+  const [postingComment, setPostingComment] = useState(false);
 
+  useEffect(() => {
+    loadComments();
+  }, [task.id]);
+
+  async function loadComments() {
+    try {
+      const data = await getCommentsForTask(task.id);
+      setComments(data);
+    } finally {
+      setLoadingComments(false);
+    }
+  }
+
+  async function handleAddComment() {
+    if (!newComment.trim()) return;
+    setPostingComment(true);
+    try {
+      const comment = await addComment(task.id, newComment);
+      setComments([...comments, comment]);
+      setNewComment("");
+    } finally {
+      setPostingComment(false);
+    }
+  }
   async function handleSave() {
     setSaving(true);
     try {
@@ -111,7 +141,47 @@ export default function TaskDetailModal({ task, onClose, onUpdate }: TaskDetailM
           Reported by {task.reporterName}
           {task.assigneeName && ` · Assigned to ${task.assigneeName}`}
         </div>
+        <div className="border-t border-slate-700 pt-4 mb-4">
+          <h3 className="text-sm font-semibold text-slate-300 mb-3">Comments</h3>
 
+          {loadingComments ? (
+            <p className="text-sm text-slate-500">Loading comments...</p>
+          ) : comments.length === 0 ? (
+            <p className="text-sm text-slate-500 mb-3">No comments yet.</p>
+          ) : (
+            <div className="space-y-3 mb-3 max-h-48 overflow-y-auto">
+              {comments.map((c) => (
+                <div key={c.id} className="bg-slate-700/50 rounded p-2">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <span className="text-xs font-medium text-slate-300">{c.authorName}</span>
+                    <span className="text-xs text-slate-500">
+                      {new Date(c.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-200">{c.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add a comment..."
+              onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+              className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={handleAddComment}
+              disabled={postingComment}
+              className="bg-slate-600 hover:bg-slate-500 disabled:bg-slate-700 px-3 py-1.5 rounded text-sm transition-colors"
+            >
+              Post
+            </button>
+          </div>
+        </div>
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
