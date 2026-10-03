@@ -4,7 +4,7 @@ import { getTasksForProject, createTask, updateTask } from "../api/tasks";
 import TaskCard from "../components/TaskCard";
 import TaskDetailModal from "../components/TaskDetailModal";
 import type { Task, TaskStatus, TaskPriority } from "../types";
-
+import { useProjectTaskSocket } from "../hooks/useProjectTaskSocket";
 const columns: { status: TaskStatus; label: string }[] = [
   { status: "TODO", label: "To Do" },
   { status: "IN_PROGRESS", label: "In Progress" },
@@ -29,7 +29,15 @@ export default function ProjectBoard() {
       loadTasks(numericProjectId);
     }
   }, [numericProjectId]);
-
+  useProjectTaskSocket(numericProjectId, (updatedTask) => {
+    setTasks((currentTasks) => {
+      const exists = currentTasks.some((t) => t.id === updatedTask.id);
+      if (exists) {
+        return currentTasks.map((t) => (t.id === updatedTask.id ? updatedTask : t));
+      }
+      return [...currentTasks, updatedTask];
+    });
+  });
   async function loadTasks(pid: number) {
     try {
       const data = await getTasksForProject(pid);
