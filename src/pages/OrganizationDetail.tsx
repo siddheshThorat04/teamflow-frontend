@@ -5,6 +5,7 @@ import { getProjectsForOrg, createProject } from "../api/projects";
 import type { Organization, Project } from "../types";
 import { getMembers, addMember } from "../api/members";
 import type { OrganizationMember } from "../api/members";
+import { useAuth } from "../context/AuthContext";
 export default function OrganizationDetail() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -19,7 +20,9 @@ export default function OrganizationDetail() {
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectKey, setNewProjectKey] = useState("");
   const [creating, setCreating] = useState(false);
-
+  const { userEmail } = useAuth();
+  const myMembership = members.find((m) => m.email === userEmail);
+  const canManageMembers = myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
   useEffect(() => {
     if (orgSlug) {
       loadData(orgSlug);
@@ -170,53 +173,55 @@ export default function OrganizationDetail() {
           </div>
         )}
         <div className="mt-10">
-  <div className="flex justify-between items-center mb-6">
-    <h2 className="text-xl font-semibold">Members</h2>
-    <button
-      onClick={() => setShowAddMemberForm(!showAddMemberForm)}
-      className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium text-sm transition-colors"
-    >
-      + Add Member
-    </button>
-  </div>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Members</h2>
+            {canManageMembers && (
+              <button
+                onClick={() => setShowAddMemberForm(!showAddMemberForm)}
+                className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium text-sm transition-colors"
+              >
+                + Add Member
+              </button>
+            )}
+          </div>
 
-  {showAddMemberForm && (
-    <form
-      onSubmit={handleAddMember}
-      className="bg-slate-800 rounded-lg p-4 mb-6 flex gap-2"
-    >
-      <input
-        type="email"
-        placeholder="Email of an existing Teamflow user"
-        value={newMemberEmail}
-        onChange={(e) => setNewMemberEmail(e.target.value)}
-        required
-        className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      <button
-        type="submit"
-        disabled={addingMember}
-        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 px-4 py-2 rounded font-medium transition-colors"
-      >
-        {addingMember ? "Adding..." : "Add"}
-      </button>
-    </form>
-  )}
+          {showAddMemberForm && canManageMembers && (
+            <form
+              onSubmit={handleAddMember}
+              className="bg-slate-800 rounded-lg p-4 mb-6 flex gap-2"
+            >
+              <input
+                type="email"
+                placeholder="Email of an existing Teamflow user"
+                value={newMemberEmail}
+                onChange={(e) => setNewMemberEmail(e.target.value)}
+                required
+                className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                disabled={addingMember}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 px-4 py-2 rounded font-medium transition-colors"
+              >
+                {addingMember ? "Adding..." : "Add"}
+              </button>
+            </form>
+          )}
 
-  <div className="bg-slate-800 border border-slate-700 rounded-lg divide-y divide-slate-700">
-    {members.map((m) => (
-      <div key={m.userId} className="px-4 py-3 flex justify-between items-center">
-        <div>
-          <p className="text-sm font-medium">{m.fullName}</p>
-          <p className="text-xs text-slate-400">{m.email}</p>
+          <div className="bg-slate-800 border border-slate-700 rounded-lg divide-y divide-slate-700">
+            {members.map((m) => (
+              <div key={m.userId} className="px-4 py-3 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium">{m.fullName}</p>
+                  <p className="text-xs text-slate-400">{m.email}</p>
+                </div>
+                <span className="text-xs bg-slate-700 px-2 py-1 rounded uppercase tracking-wide">
+                  {m.role}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-        <span className="text-xs bg-slate-700 px-2 py-1 rounded uppercase tracking-wide">
-          {m.role}
-        </span>
-      </div>
-    ))}
-  </div>
-</div>
       </main>
     </div>
   );
